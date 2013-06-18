@@ -1,0 +1,62 @@
+#!/bin/bash
+#
+#   $ ./build_nginx
+#
+set -e
+set -u
+
+EXPECTED_ARGS=1
+E_BADARGS=65
+
+if [ $# -lt $EXPECTED_ARGS ]
+then
+  echo "Usage: `basename $0` {dist_name} [clean]"
+  exit ${E_BADARGS};
+fi
+
+name=nginx-passenger
+#use old debian init.d scripts or ubuntu upstart
+dist=$1
+VERSION=1.5.1
+description="small, powerful, scalable web/proxy server
+ Nginx (\"engine X\") is a high-performance web and reverse proxy server created by Igor Sysoev. It can be used both as a standalone web server and as a
+ proxy to reduce the load on back-end HTTP or mail servers."
+url="http://nginx.net"
+arch="amd64"
+section="misc"
+package_version=""
+origdir="$(pwd)"
+TAR="nginx-${VERSION}.tar.gz"
+SOURCE="http://nginx.org/download/${TAR}"
+
+CLEAN="false"
+if [ $# -gt 1 ]; then
+  if [ $2 == "clean" ]; then
+        echo "got clear arg"
+    CLEAN="true"
+  fi
+fi
+
+
+#_ MAIN _#
+echo "removing ${name}*.deb"
+rm -rf ${name}*.deb
+mkdir -p tmp && pushd tmp
+if [ ! -d ${name} ]; then
+  wget ${SOURCE}
+  tar -xf ${TAR}
+  cd "nginx-${VERSION}"
+fi
+
+if [ ${CLEAN} == "true" ]; then
+  echo "cleaning previous build"
+  rm -rf build
+  mkdir build
+fi
+
+
+#http://nginx.org/download/nginx-1.5.1.tar.gz
+
+
+
+
