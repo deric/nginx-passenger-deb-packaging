@@ -24,17 +24,16 @@ in commands:
    1. install prerequisites, install ruby, we recommend using [RVM](http://rvm.io/)
    2. `gem install rake fpm passenger`
    3. for modifying build parameters you have to edit `build_nginx` script
-   4. if you want specific version of nginx, it is specified at the begining of `build_nginx` script (currently nginx 1.5.1 is fetched from the website)
-
+   4. if you want specific version of nginx, it is specified by `VERSION` variable at the begining of `build_nginx` script (currently nginx 1.5.1 is fetched from the official website)
    5. just run script with your distribution name (tested on `squeeze`, `wheezy`)
 
         ./build_nginx wheezy
 
 ### TODO
 
-    * support multiple build profiles (something like nginx-full, nginx-naxis)
-    * add support for Ubuntu upstart scripts
-    * pass parameters via arguments
+ * support multiple build profiles (something like nginx-full, nginx-naxis)
+ * add support for Ubuntu upstart scripts
+ * pass parameters via arguments
 
 ### Included modules
 
