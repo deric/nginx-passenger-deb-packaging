@@ -38,7 +38,7 @@ in commands:
 
 ### Included modules
 
-    * **Standard HTTP Modules**: Core, Access, Auth Basic, Auto Index, Browser, Charset, Empty GIF, FastCGI, Gzip, Headers, Index, Log, Limit Requests, Limit Zone, Map, Memcached, Proxy, Referer, Rewrite, Split Clients, SSI, Upstream, User ID, UWSGI
-   * **Optional HTTP Modules**: Debug, Gzip Precompression, IPv6, Stub Status, SSL, Passenger, WebDAV
+ * **Standard HTTP Modules**: Core, Access, Auth Basic, Auto Index, Browser, Charset, Empty GIF, FastCGI, Gzip, Headers, Index, Log, Limit Requests, Limit Zone, Map, Memcached, Proxy, Referer, Rewrite, Split Clients, SSI, Upstream, User ID, UWSGI
+ * **Optional HTTP Modules**: Debug, Gzip Precompression, IPv6, Stub Status, SSL, Passenger, WebDAV
 
 
