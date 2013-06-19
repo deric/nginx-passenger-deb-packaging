@@ -1,23 +1,22 @@
 # Nginx-passenger Debian packaging
 
-Simple build script for creating a debian package which can be easily distributed over a cluster. Should be more or less equivalent to the official Debian package, except [Phusion Passenger](https://www.phusionpassenger.com/) integration.
+Simple build script for compiling a debian package which can be easily distributed over a cluster. Should be more or less equivalent to the official Debian package, except [Phusion Passenger](https://www.phusionpassenger.com/) integration.
 
-Script allows modification of included modules etc. if you are familiar with bash syntax, so that you can customize the binary according to your needs.
+Script allows modification of included modules etc. if you are familiar with bash syntax you can customize the build according to your needs.
 
 ### Requirements
 
-  * [FPM](https://github.com/jordansissel/fpm)
-  * ruby (>= 1.9.3)
-  * autoconf
-  * make
-  * g++
-  * passenger gem
-  * libSSL
-  * libpcre3
+  * ruby (recommended >= 1.9.3)
+  * gems: [FPM](https://github.com/jordansissel/fpm), [passenger](https://github.com/FooBarWidget/passenger)
+  * autoconf, make, g++
+  * lib SSL
+  * PCRE development headers
+  * Curl development headers with SSL support
+  * Zlib development headers
 
 in commands: 
 
-       sudo apt-get install autoconf automake wget make zlib1g-dev libpcre3-dev
+       sudo apt-get install autoconf automake wget make zlib1g-dev libpcre3-dev libcurl4-openssl-dev
 
 ### Usage
 
@@ -29,15 +28,15 @@ in commands:
 
         ./build_nginx wheezy
 
+### Included modules
+
+ * **Standard HTTP Modules**: Core, Access, Auth Basic, Auto Index, Browser, Charset, Empty GIF, FastCGI, Gzip, Headers, Index, Log, Limit Requests, Limit Zone, Map, Memcached, Proxy, Referer, Rewrite, Split Clients, SSI, Upstream, User ID, UWSGI
+ * **Optional HTTP Modules**: Debug, Gzip Precompression, IPv6, Stub Status, SSL, Passenger, WebDAV
+
 ### TODO
 
  * support multiple build profiles (something like nginx-full, nginx-naxis)
  * add support for Ubuntu upstart scripts
  * pass parameters via arguments
-
-### Included modules
-
- * **Standard HTTP Modules**: Core, Access, Auth Basic, Auto Index, Browser, Charset, Empty GIF, FastCGI, Gzip, Headers, Index, Log, Limit Requests, Limit Zone, Map, Memcached, Proxy, Referer, Rewrite, Split Clients, SSI, Upstream, User ID, UWSGI
- * **Optional HTTP Modules**: Debug, Gzip Precompression, IPv6, Stub Status, SSL, Passenger, WebDAV
 
 
