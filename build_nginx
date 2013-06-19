@@ -165,6 +165,7 @@ fpm -t deb \
     --category ${section} \
     --vendor "" \
     --replaces "nginx-full" --replaces "nginx-light" --replaces "nginx-naxsi" \
+    --replaces "nginx-common"
     -d "libc6" -d "libpcre3" -d "zlib1g" -d "${LIBSSL}" \
     --before-remove "${origdir}/debian/nginx-passenger.prerm" \
     --after-remove "${origdir}/debian/nginx-passenger.postrm" \
