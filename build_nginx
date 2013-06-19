@@ -149,6 +149,10 @@ mkdir -p etc/init.d
 cp -p ${origdir}/debian/initd etc/init.d/nginx
 mkdir etc/default
 cp ${origdir}/debian/default etc/default/nginx
+mkdir etc/logrotate.d
+cp debian/logrotate etc/logrotate.d/nginx
+mkdir -p lib/systemd/system
+cp debian/nginx.service lib/systemd/system/nginx.service
 
 #_ MAKE DEBIAN _#
 fpm -t deb \
