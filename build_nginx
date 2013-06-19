@@ -22,7 +22,6 @@ VERSION=1.5.1
 DEB_BUILD_ARCH=`dpkg-architecture -qDEB_BUILD_ARCH`
 LICENSE="2-clause BSD-like license" #from nginx.org
 description="small, powerful, scalable web/proxy server Nginx (\"engine X\") is a high-performance web and reverse proxy server created by Igor Sysoev. It can be used both as a standalone web server and as a proxy to reduce the load on back-end HTTP or mail servers.
-
 This package includes Passenger `passenger-config --version`"
 url="http://nginx.net"
 arch="${DEB_BUILD_ARCH}"

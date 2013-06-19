@@ -20,6 +20,14 @@ in commands:
        gem install fpm passenger
        sudo apt-get install autoconf automake wget make zlib1g-dev libpcre3-dev
 
+### Usage
+
+   * just run script with your distribution name (tested on `squeeze`, `wheezy`)
+
+        ./build_nginx wheezy
+
+   * for modifying build parameters you have to edit `build_nginx` script 
+
 ### TODO
 
     * support multiple build profiles (something like nginx-full, nginx-naxis)
