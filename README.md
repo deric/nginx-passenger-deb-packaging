@@ -21,7 +21,7 @@ in commands:
 
 ### Usage
 
-   * install prerequisites, install ruby, we recommend using (RVM)[http://rvm.io/]
+   * install prerequisites, install ruby, we recommend using [RVM](http://rvm.io/)
    * `gem install rake fpm passenger`
    * just run script with your distribution name (tested on `squeeze`, `wheezy`)
 
