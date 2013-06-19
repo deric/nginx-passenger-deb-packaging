@@ -31,6 +31,12 @@ package_version=""
 origdir="$(pwd)"
 TAR="nginx-${VERSION}.tar.gz"
 SOURCE="http://nginx.org/download/${TAR}"
+if [[ "${CODENAME}" == "squeeze" ]]; then
+  LIBSSL="libssl0.9.8"
+else
+  #should work for wheezy
+  LIBSSL="libssl1.0.0"
+fi
 LIBCURL="libcurl4-openssl-dev" #whichever libcurl you prefere
 #LIBCURL="libcurl4-gnutls-dev"
 
@@ -156,7 +162,7 @@ fpm -t deb \
     --category ${section} \
     --vendor "" \
     --replaces "nginx-full" --replaces "nginx-light" --replaces "nginx-naxsi" \
-    -d "libc6" -d "libpcre3" -d "zlib1g" \
+    -d "libc6" -d "libpcre3" -d "zlib1g" -d "${LIBSSL}" \
     --before-remove "${origdir}/debian/nginx-passenger.prerm" \
     --after-remove "${origdir}/debian/nginx-passenger.postrm" \
     --after-install "${origdir}/debian/nginx-passenger.postinst" \
