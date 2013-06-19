@@ -21,14 +21,14 @@ in commands:
 
 ### Usage
 
-   * install prerequisites, install ruby, we recommend using [RVM](http://rvm.io/)
-   * `gem install rake fpm passenger`
-   * just run script with your distribution name (tested on `squeeze`, `wheezy`)
+   1. install prerequisites, install ruby, we recommend using [RVM](http://rvm.io/)
+   2. `gem install rake fpm passenger`
+   3. for modifying build parameters you have to edit `build_nginx` script
+   4. if you want specific version of nginx, it is specified at the begining of `build_nginx` script (currently nginx 1.5.1 is fetched from the website)
+
+   5. just run script with your distribution name (tested on `squeeze`, `wheezy`)
 
         ./build_nginx wheezy
-
-   * for modifying build parameters you have to edit `build_nginx` script 
-   * if you want specific version of nginx, it's specified at the begining of `build_nginx` script (currently nginx 1.5.1 is fetched from the website)
 
 ### TODO
 
