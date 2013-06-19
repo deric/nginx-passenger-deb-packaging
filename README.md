@@ -1,12 +1,12 @@
 # Nginx-passenger Debian packaging
 
-Simple build script for creating a debian package which can be easily distributed over a cluster. Should be more or less equivalent to the official Debian package, except (Phusion Passenger)[https://www.phusionpassenger.com/] integration.
+Simple build script for creating a debian package which can be easily distributed over a cluster. Should be more or less equivalent to the official Debian package, except [Phusion Passenger](https://www.phusionpassenger.com/) integration.
 
 Script allows modification of included modules etc. if you are familiar with bash syntax, so that you can customize the binary according to your needs.
 
 ### Requirements
 
-  * FPM (https://github.com/jordansissel/fpm)
+  * [FPM](https://github.com/jordansissel/fpm)
   * ruby (>= 1.9.3)
   * autoconf
   * make
