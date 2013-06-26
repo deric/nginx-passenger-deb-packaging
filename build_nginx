@@ -25,7 +25,7 @@ description="small, powerful, scalable web/proxy server Nginx (\"engine X\") is 
 This package includes Passenger `passenger-config --version`"
 url="http://nginx.net"
 arch="${DEB_BUILD_ARCH}"
-section="misc"
+section="httpd"
 package_version=""
 origdir="$(pwd)"
 TAR="nginx-${VERSION}.tar.gz"
