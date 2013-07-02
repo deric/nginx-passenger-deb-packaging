@@ -41,7 +41,7 @@ LIBCURL="libcurl4-openssl-dev" #whichever libcurl you prefere
 
 #depending on you ruby installation you might need to use some sort of sudo
 PATERN='rvmsudo is.*'
-if [[ `type rvmsudo` =~  $PATERN ]]; then
+if [[ `type rvmsudo` =~ $PATERN ]]; then
  SUDO="rvmsudo"
 else
  SUDO="sudo"
@@ -158,6 +158,15 @@ mkdir etc/logrotate.d
 cp ${origdir}/debian/logrotate etc/logrotate.d/nginx
 mkdir -p lib/systemd/system
 cp ${origdir}/debian/nginx.service lib/systemd/system/nginx.service
+
+mkdir etc/nginx/sites-available
+cp ${origdir}/debian/default.site etc/nginx/sites-available/default
+cp ${origdir}/debian/nginx.conf etc/nginx/nginx.conf
+mkdir etc/nginx/sites-enabled
+mkdir etc/nginx/conf.d
+
+#split etc/nginx/nginx.conf > etc/nginx/sites-available/default
+#add include in etc/nginx/nginx.conf
 
 #_ MAKE DEBIAN _#
 fpm -t deb \
