@@ -14,33 +14,32 @@ then
   exit ${E_BADARGS};
 fi
 
-name=nginx-passenger
 #use old debian init.d scripts or ubuntu upstart
 dist="debian" #$1
 CODENAME=$1
-VERSION=1.5.1
-DEB_BUILD_ARCH=`dpkg-architecture -qDEB_BUILD_ARCH`
-LICENSE="2-clause BSD-like license" #from nginx.org
-description="small, powerful, scalable web/proxy server Nginx (\"engine X\") is a high-performance web and reverse proxy server created by Igor Sysoev. It can be used both as a standalone web server and as a proxy to reduce the load on back-end HTTP or mail servers.
-This package includes Passenger `passenger-config --version`"
-url="http://nginx.net"
-arch="${DEB_BUILD_ARCH}"
-section="misc"
-package_version=""
 origdir="$(pwd)"
-TAR="nginx-${VERSION}.tar.gz"
-SOURCE="http://nginx.org/download/${TAR}"
-if [[ "${CODENAME}" == "squeeze" ]]; then
-  LIBSSL="libssl0.9.8"
-else
-  #should work for wheezy
-  LIBSSL="libssl1.0.0"
-fi
-LIBCURL="libcurl4-openssl-dev" #whichever libcurl you prefere
-#LIBCURL="libcurl4-gnutls-dev"
 
-#depending on you ruby installation you might need to use some sort of sudo
-SUDO="rvmsudo"
+NGINX_VERSION="1.5.1"
+NGINX_BASENAME="nginx-${NGINX_VERSION}"
+NGINX_SOURCE="http://nginx.org/download/${NGINX_BASENAME}.tar.gz"
+
+DEBIAN_ROOT="deb"
+DEB_NAME=nginx-passenger
+DEB_VERSION="a.${PASSENGER_VERSION}"
+DEB_LICENSE="2-clause BSD-like license" #from nginx.org
+DEB_DESCRIPTION="small, powerful, scalable web/proxy server Nginx (\"engine X\") is a high-performance web and reverse proxy server created by Igor Sysoev. It can be used both as a standalone web server and as a proxy to reduce the load on back-end HTTP or mail servers.
+This package includes Passenger ${PASSENGER_VERSION}"
+DEB_URL="http://nginx.net"
+DEB_ARCH=`dpkg-architecture -qDEB_BUILD_ARCH`
+DEB_SECTION="httpd"
+
+#TODO find other sudo case 'su'...
+PATERN='rvmsudo is.*'
+if [[ `type rvmsudo` =~ $PATERN ]]; then
+ SUDO="rvmsudo"
+else
+ SUDO="sudo"
+fi
 
 CLEAN="false"
 if [ $# -gt 1 ]; then
@@ -58,23 +57,14 @@ if [[ -z ${MAINTAINER+xxx} && "${MAINTAINER+xxx}" = "xxx" ]]; then
 fi
 
 
-#_ MAIN _#
-echo "removing ${name}*.deb"
-rm -rf ${name}*.deb
-mkdir -p tmp && pushd tmp
-SRC_DIR="nginx-${VERSION}"
-if [ ! -d ${SRC_DIR} ]; then
-  wget ${SOURCE}
-  tar -xvzf ${TAR}
+if [[ "${CODENAME}" == "squeeze" ]]; then
+  LIBSSL="libssl0.9.8"
+else
+  #should work for wheezy
+  LIBSSL="libssl1.0.0"
 fi
-cd ${SRC_DIR}
-
-
-if [ ${CLEAN} == "true" ]; then
-  echo "cleaning previous build"
-  rm -rf build
-  mkdir build
-fi
+LIBCURL="libcurl4-openssl-dev" #whichever libcurl you prefere
+#LIBCURL="libcurl4-gnutls-dev"
 
 #check dependencies
 DEPENDENCIES=(autoconf automake wget make ${LIBCURL} zlib1g-dev libpcre3-dev)
@@ -91,6 +81,46 @@ done
 if [[ i -gt 0 ]]; then
   echo "please install missing dependencies"
   exit 1
+fi
+#TODO Could be DRYer
+GEMS=(rake passenger fpm)
+i=0
+for gem in ${GEMS[@]}
+do
+   if [[ `gem list -i ${gem}` != 'true' ]]; then
+       echo "missing gem: ${gem}"
+     i=$((i+1))
+   fi
+done
+if [[ i -gt 0 ]]; then
+  echo "please install missing gem"
+  exit 1
+fi
+
+#_ MAIN _#
+echo "removing ${DEB_NAME}*.deb"
+rm -rf ${DEB_NAME}*.deb
+mkdir -p tmp && pushd tmp
+
+if [ ! -d $NGINX_BASENAME ]; then
+  wget $NGINX_SOURCE
+  tar -xvzf "${NGINX_BASENAME}.tar.gz"
+fi
+
+if [[ -d $DEBIAN_ROOT ]]; then
+  echo "removing old ${DEBIAN_ROOT} directory..."
+  rm -rf $DEBIAN_ROOT
+fi
+
+mkdir $DEBIAN_ROOT
+DEBIAN_ROOT=$(readlink -f $DEBIAN_ROOT)
+
+pushd $NGINX_BASENAME
+
+if [ ${CLEAN} == "true" ]; then
+  echo "cleaning previous build"
+  rm -rf build
+  mkdir build
 fi
 
 #findout passenger path
@@ -124,45 +154,34 @@ OPTS="--prefix=/etc/nginx \
 
 #for GeoIp module: --with-http_geoip_module
 
-
-if [[ -d "deb" ]]; then
-  echo "removing old deb directory..."
-  rm -rf deb
-fi
-
-mkdir deb
-
 echo "nginx options: ${OPTS}"
 ${SUDO} ./configure ${OPTS}
 #if sudo is used, objects are owned by root
 ${SUDO} chown -R ${USER} .
 make
-make install DESTDIR=`pwd`/deb
+make install DESTDIR=$DEBIAN_ROOT
+popd #$NGINX_BASENAME
 
+# preserve executable flag
+cp -Rp debian/template/. $DEBIAN_ROOT
 
-cd deb
+#_ MAKE DEBIAN _#
+pushd $DEBIAN_ROOT
 echo "entering package root `pwd`"
 echo "building deb package ..."
 
-mkdir -p etc/init.d
-# preserve executable flag
-cp -p ${origdir}/debian/initd etc/init.d/nginx
-mkdir etc/default
-cp ${origdir}/debian/default etc/default/nginx
-mkdir etc/logrotate.d
-cp ${origdir}/debian/logrotate etc/logrotate.d/nginx
-mkdir -p lib/systemd/system
-cp ${origdir}/debian/nginx.service lib/systemd/system/nginx.service
+#TODO lintian tell us to mark all config files
+#    --config-files "${origdir}/debian/nginx-passenger.postrm" \
+# --replaces or --conflicts ruby-passenger libapache2-mod-passenger
 
-#_ MAKE DEBIAN _#
-fpm -t deb \
-    -n ${name} \
-    -v "${VERSION}~${CODENAME}${package_version}" \
-    --description "${description}" \
-    --url="${url}" \
-    -a ${arch} \
-    --license "${LICENSE}" \
-    --category ${section} \
+fpm -t ${DEBIAN_ROOT} \
+    -n ${DEB_NAME} \
+    -v "${NGINX_VERSION}~${CODENAME}${DEB_VERSION}" \
+    --description "${DEB_DESCRIPTION}" \
+    --url="${DEB_URL}" \
+    -a ${DEB_ARC} \
+    --license "${DEB_LICENSE}" \
+    --category ${DEB_SECTION} \
     --vendor "" \
     --replaces "nginx-full" --replaces "nginx-light" --replaces "nginx-naxsi" \
     --replaces "nginx-common" \
@@ -174,6 +193,8 @@ fpm -t deb \
     --prefix=/ \
     -s dir \
     -- .
-mv ${name}*.deb ${origdir}
-popd
+mv ${DEB_NAME}*.deb ${origdir}
+popd #$DEBIAN_ROOT
 
+popd #tmp
+exit 1;
