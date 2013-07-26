@@ -25,10 +25,10 @@ NGINX_SOURCE="http://nginx.org/download/${NGINX_BASENAME}.tar.gz"
 
 DEBIAN_ROOT="deb"
 DEB_NAME=nginx-passenger
-DEB_VERSION="a.${PASSENGER_VERSION}"
+DEB_VERSION="a.`passenger-config --version`"
 DEB_LICENSE="2-clause BSD-like license" #from nginx.org
 DEB_DESCRIPTION="small, powerful, scalable web/proxy server Nginx (\"engine X\") is a high-performance web and reverse proxy server created by Igor Sysoev. It can be used both as a standalone web server and as a proxy to reduce the load on back-end HTTP or mail servers.
-This package includes Passenger ${PASSENGER_VERSION}"
+This package includes Passenger `passenger-config --version`"
 DEB_URL="http://nginx.net"
 DEB_ARCH=`dpkg-architecture -qDEB_BUILD_ARCH`
 DEB_SECTION="httpd"
@@ -163,7 +163,7 @@ make install DESTDIR=$DEBIAN_ROOT
 popd #$NGINX_BASENAME
 
 # preserve executable flag
-cp -Rp debian/template/. $DEBIAN_ROOT
+cp -Rp ../debian/template/. $DEBIAN_ROOT
 
 #_ MAKE DEBIAN _#
 pushd $DEBIAN_ROOT
@@ -174,12 +174,12 @@ echo "building deb package ..."
 #    --config-files "${origdir}/debian/nginx-passenger.postrm" \
 # --replaces or --conflicts ruby-passenger libapache2-mod-passenger
 
-fpm -t ${DEBIAN_ROOT} \
+fpm -t deb \
     -n ${DEB_NAME} \
     -v "${NGINX_VERSION}~${CODENAME}${DEB_VERSION}" \
     --description "${DEB_DESCRIPTION}" \
     --url="${DEB_URL}" \
-    -a ${DEB_ARC} \
+    -a ${DEB_ARCH} \
     --license "${DEB_LICENSE}" \
     --category ${DEB_SECTION} \
     --vendor "" \
