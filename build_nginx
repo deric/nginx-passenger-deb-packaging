@@ -15,8 +15,6 @@ then
 fi
 
 #use old debian init.d scripts or ubuntu upstart
-dist="debian" #$1
-CODENAME=$1
 origdir="$(pwd)"
 
 NGINX_VERSION="1.5.1"
@@ -25,12 +23,8 @@ NGINX_SOURCE="http://nginx.org/download/${NGINX_BASENAME}.tar.gz"
 
 DEBIAN_ROOT="deb"
 DEB_NAME=nginx-passenger
-DEB_VERSION="a.`passenger-config --version`"
 DEB_LICENSE="2-clause BSD-like license" #from nginx.org
-DEB_DESCRIPTION="small, powerful, scalable web/proxy server Nginx (\"engine X\") is a high-performance web and reverse proxy server created by Igor Sysoev. It can be used both as a standalone web server and as a proxy to reduce the load on back-end HTTP or mail servers.
-This package includes Passenger `passenger-config --version`"
 DEB_URL="http://nginx.net"
-DEB_ARCH=`dpkg-architecture -qDEB_BUILD_ARCH`
 DEB_SECTION="httpd"
 #fetches last line with libssl version
 LIBSSL_VERSION=`/sbin/ldconfig -p | grep libssl | grep -o '[0-9]\.[0-9]\.[0-9]' | tail -n 1`
@@ -58,141 +52,219 @@ if [[ -z ${MAINTAINER+xxx} && "${MAINTAINER+xxx}" = "xxx" ]]; then
   MAINTAINER="${USER}@localhost"
 fi
 
-
 LIBSSL="libssl${LIBSSL_VERSION}"
 
 LIBCURL="libcurl4-openssl-dev" #whichever libcurl you prefere
 #LIBCURL="libcurl4-gnutls-dev"
 
-#check dependencies
-DEPENDENCIES=(autoconf automake wget make ${LIBCURL} zlib1g-dev libpcre3-dev)
-i=0
-expstatus="Status: install ok installed"
-for package in ${DEPENDENCIES[@]}
-do
-   status=`dpkg -s ${package} | grep Status:`
-   if [[ "${status}" != *"${expstatus}"* ]]; then
-     echo "missing package: ${package}"
-     i=$((i+1))
-   fi
-done
-if [[ i -gt 0 ]]; then
-  echo "please install missing dependencies"
-  exit 1
+function check_dependencies {
+    DEPENDENCIES=(autoconf automake wget make ${LIBCURL} zlib1g-dev libpcre3-dev)
+    i=0
+    expstatus="Status: install ok installed"
+    for package in ${DEPENDENCIES[@]}
+    do
+       status=`dpkg -s ${package} | grep Status:`
+       if [[ "${status}" != *"${expstatus}"* ]]; then
+         echo "missing package: ${package}"
+         i=$((i+1))
+       fi
+    done
+    if [[ i -gt 0 ]]; then
+      echo "please install missing dependencies"
+      exit 1
+    fi
+    #TODO Could be DRYer
+    GEMS=(rake passenger fpm)
+    i=0
+    for gem in ${GEMS[@]}
+    do
+       if [[ `gem list -i ${gem}` != 'true' ]]; then
+           echo "missing gem: ${gem}"
+         i=$((i+1))
+       fi
+    done
+    if [[ i -gt 0 ]]; then
+      echo "please install missing gem"
+      exit 1
+    fi
+}
+
+function main {
+  check_dependencies
+  cleanup
+  checkout
+  pkg
+}
+
+function cleanup {
+  echo "removing ${DEB_NAME}*.deb"
+  rm -f ${DEB_NAME}*.deb
+}
+
+function checkout {
+    mkdir -p tmp && pushd tmp
+
+    if [ ! -d $NGINX_BASENAME ]; then
+      wget $NGINX_SOURCE
+      tar -xvzf "${NGINX_BASENAME}.tar.gz"
+    fi
+}
+
+
+function deb_ {
+    PASSENGER_VERSION=`passenger-config --version`
+    DEB_VERSION="a.${PASSENGER_VERSION}"
+    DEB_DESCRIPTION="small, powerful, scalable web/proxy server Nginx (\"engine X\") is a high-performance web and reverse proxy server created by Igor Sysoev. It can be used both as a standalone web server and as a proxy to reduce the load on back-end HTTP or mail servers.
+This package includes Passenger ${PASSENGER_VERSION}"
+    if [[ -d $DEBIAN_ROOT ]]; then
+      echo "removing old ${DEBIAN_ROOT} directory..."
+      rm -rf $DEBIAN_ROOT
+    fi
+
+    mkdir $DEBIAN_ROOT
+    DEBIAN_ROOT=$(readlink -f $DEBIAN_ROOT)
+
+    pushd $NGINX_BASENAME
+
+    if [ ${CLEAN} == "true" ]; then
+      echo "cleaning previous build"
+      rm -rf build
+      mkdir build
+    fi
+
+    #findout passenger path
+    PASSENGER_GEM_DIR=`passenger-config --root`
+    passenger_ext_path="${PASSENGER_GEM_DIR}/ext/nginx"
+
+    if [[ ! -d ${passenger_ext_path} ]]; then
+      echo "the passenger gem does not seem to be correctly installed, check ${PASSENGER_GEM_DIR}"
+    fi
+
+    #nginx options
+    OPTS="--prefix=/etc/nginx \
+    --conf-path=/etc/nginx/nginx.conf \
+    --error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid \
+    --lock-path=/var/lock/nginx.lock \
+    --http-log-path=/var/log/nginx/access.log \
+    --with-http_dav_module \
+    --http-client-body-temp-path=/var/lib/nginx/body \
+    --http-proxy-temp-path=/var/lib/nginx/proxy \
+    --with-http_stub_status_module \
+    --sbin-path=/usr/sbin/nginx \
+    --with-http_ssl_module \
+    --with-http_gzip_static_module \
+    --with-ipv6 \
+    --http-uwsgi-temp-path=/var/lib/nginx/uwsgi \
+    --with-http_realip_module \
+    --with-debug \
+    --with-sha1=/usr/include/openssl \
+    --with-md5=/usr/include/openssl \
+    --add-module=${passenger_ext_path}"
+
+    #for GeoIp module: --with-http_geoip_module
+
+    echo "nginx options: ${OPTS}"
+    ${SUDO} ./configure ${OPTS}
+    #if sudo is used, objects are owned by root
+    ${SUDO} chown -R ${USER} .
+    make
+    make install DESTDIR=$DEBIAN_ROOT
+    popd #$NGINX_BASENAME
+
+    # preserve executable flag
+    cp -Rp ../debian/template/. $DEBIAN_ROOT
+
+    #_ MAKE DEBIAN _#
+    pushd $DEBIAN_ROOT
+    echo "entering package root `pwd`"
+    echo "building deb package ..."
+
+    #TODO lintian tell us to mark all config files
+    #    --config-files "${origdir}/debian/nginx-passenger.postrm" \
+    # --replaces or --conflicts ruby-passenger libapache2-mod-passenger
+
+    fpm -t deb \
+        -n ${DEB_NAME} \
+        -v "${NGINX_VERSION}~${codename}${DEB_VERSION}" \
+        --description "${DEB_DESCRIPTION}" \
+        --url="${DEB_URL}" \
+        -a ${arch} \
+        --license "${DEB_LICENSE}" \
+        --category ${DEB_SECTION} \
+        --vendor "" \
+        --replaces "nginx-full" --replaces "nginx-light" --replaces "nginx-naxsi" \
+        --replaces "nginx-common" \
+        -d "libc6" -d "libpcre3" -d "zlib1g" -d "${LIBSSL}" \
+        --before-remove "${origdir}/debian/nginx-passenger.prerm" \
+        --after-remove "${origdir}/debian/nginx-passenger.postrm" \
+        --after-install "${origdir}/debian/nginx-passenger.postinst" \
+        -m "$MAINTAINER" \
+        --prefix=/ \
+        -s dir \
+        -- .
+    mv ${DEB_NAME}*.deb ${origdir}
+    popd #$DEBIAN_ROOT
+}
+
+function rpm_ {
+  err "Not implemented."
+}
+
+function pkg {
+  case "$linux" in
+    ubuntu/*|debian/*) deb_ ;;
+    centos/*|redhat/*) rpm_ ;;
+    *)                 err "Not sure how to package for: $linux" ;;
+  esac
+}
+
+function architecture {
+  case "$linux" in
+    ubuntu/*|debian/*) dpkg-architecture -qDEB_BUILD_ARCH ;;
+    centos/*|redhat/*) arch ;;
+    *)                 err "Not sure how to determine arch for: $linux" ;;
+  esac
+}
+
+function get_codename {
+  case "$linux" in
+    ubuntu/*|debian/*)
+      lsb_release -c | cut -d: -f2 | tr A-Z a-z | xargs | tr ' ' '/'
+    ;;
+    centos/*|redhat/*)
+      err "not implemented yet"
+    ;;
+    *)                 err "Not sure how to configure logrotate for: $linux" ;;
+  esac
+}
+
+function lsb_release_tag {
+  lsb_release --id --release | cut -d: -f2 | tr A-Z a-z | xargs | tr ' ' '/'
+}
+
+function find_gem_bin {
+  gem env | sed -n '/^ *- EXECUTABLE DIRECTORY: */ { s/// ; p }'
+}
+
+function get_system_info {
+  linux="$(lsb_release_tag)"            # <distro>/<version>, like ubuntu/12.10
+  arch="$(architecture)"          # In the format used to label distro packages
+  gem_bin="$(find_gem_bin)"                          # Might not be on the PATH
+  codename="$(get_codename)"
+}
+
+function msg { out "$*" >&2 ;}
+function err { local x=$? ; msg "$*" ; return $(( $x == 0 ? 1 : $x )) ;}
+function out { printf '%s\n' "$*" ;}
+
+if [[ ${1:-} ]] && declare -F | cut -d' ' -f3 | fgrep -qx -- "${1:-}"
+then
+  case "$1" in
+    -h|--help) : ;; # Skip system info lookup
+    *)         get_system_info ;;
+  esac
+  "$@"
+else
+  get_system_info
+  main "$@"
 fi
-#TODO Could be DRYer
-GEMS=(rake passenger fpm)
-i=0
-for gem in ${GEMS[@]}
-do
-   if [[ `gem list -i ${gem}` != 'true' ]]; then
-       echo "missing gem: ${gem}"
-     i=$((i+1))
-   fi
-done
-if [[ i -gt 0 ]]; then
-  echo "please install missing gem"
-  exit 1
-fi
-
-#_ MAIN _#
-echo "removing ${DEB_NAME}*.deb"
-rm -rf ${DEB_NAME}*.deb
-mkdir -p tmp && pushd tmp
-
-if [ ! -d $NGINX_BASENAME ]; then
-  wget $NGINX_SOURCE
-  tar -xvzf "${NGINX_BASENAME}.tar.gz"
-fi
-
-if [[ -d $DEBIAN_ROOT ]]; then
-  echo "removing old ${DEBIAN_ROOT} directory..."
-  rm -rf $DEBIAN_ROOT
-fi
-
-mkdir $DEBIAN_ROOT
-DEBIAN_ROOT=$(readlink -f $DEBIAN_ROOT)
-
-pushd $NGINX_BASENAME
-
-if [ ${CLEAN} == "true" ]; then
-  echo "cleaning previous build"
-  rm -rf build
-  mkdir build
-fi
-
-#findout passenger path
-PASSENGER_GEM_DIR=`passenger-config --root`
-passenger_ext_path="${PASSENGER_GEM_DIR}/ext/nginx"
-
-if [[ ! -d ${passenger_ext_path} ]]; then
-  echo "the passenger gem does not seem to be correctly installed, check ${PASSENGER_GEM_DIR}"
-fi
-
-#nginx options
-OPTS="--prefix=/etc/nginx \
---conf-path=/etc/nginx/nginx.conf \
---error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid \
---lock-path=/var/lock/nginx.lock \
---http-log-path=/var/log/nginx/access.log \
---with-http_dav_module \
---http-client-body-temp-path=/var/lib/nginx/body \
---http-proxy-temp-path=/var/lib/nginx/proxy \
---with-http_stub_status_module \
---sbin-path=/usr/sbin/nginx \
---with-http_ssl_module \
---with-http_gzip_static_module \
---with-ipv6 \
---http-uwsgi-temp-path=/var/lib/nginx/uwsgi \
---with-http_realip_module \
---with-debug \
---with-sha1=/usr/include/openssl \
---with-md5=/usr/include/openssl \
---add-module=${passenger_ext_path}"
-
-#for GeoIp module: --with-http_geoip_module
-
-echo "nginx options: ${OPTS}"
-${SUDO} ./configure ${OPTS}
-#if sudo is used, objects are owned by root
-${SUDO} chown -R ${USER} .
-make
-make install DESTDIR=$DEBIAN_ROOT
-popd #$NGINX_BASENAME
-
-# preserve executable flag
-cp -Rp ../debian/template/. $DEBIAN_ROOT
-
-#_ MAKE DEBIAN _#
-pushd $DEBIAN_ROOT
-echo "entering package root `pwd`"
-echo "building deb package ..."
-
-#TODO lintian tell us to mark all config files
-#    --config-files "${origdir}/debian/nginx-passenger.postrm" \
-# --replaces or --conflicts ruby-passenger libapache2-mod-passenger
-
-fpm -t deb \
-    -n ${DEB_NAME} \
-    -v "${NGINX_VERSION}~${CODENAME}${DEB_VERSION}" \
-    --description "${DEB_DESCRIPTION}" \
-    --url="${DEB_URL}" \
-    -a ${DEB_ARCH} \
-    --license "${DEB_LICENSE}" \
-    --category ${DEB_SECTION} \
-    --vendor "" \
-    --replaces "nginx-full" --replaces "nginx-light" --replaces "nginx-naxsi" \
-    --replaces "nginx-common" \
-    -d "libc6" -d "libpcre3" -d "zlib1g" -d "${LIBSSL}" \
-    --before-remove "${origdir}/debian/nginx-passenger.prerm" \
-    --after-remove "${origdir}/debian/nginx-passenger.postrm" \
-    --after-install "${origdir}/debian/nginx-passenger.postinst" \
-    -m "$MAINTAINER" \
-    --prefix=/ \
-    -s dir \
-    -- .
-mv ${DEB_NAME}*.deb ${origdir}
-popd #$DEBIAN_ROOT
-
-popd #tmp
-exit 1;
