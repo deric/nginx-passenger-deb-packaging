@@ -5,12 +5,12 @@
 set -e
 set -u
 
-EXPECTED_ARGS=1
+EXPECTED_ARGS=0
 E_BADARGS=65
 
 if [ $# -lt $EXPECTED_ARGS ]
 then
-  echo "Usage: `basename $0` {codename}"
+  echo "Usage: `basename $0`"
   exit ${E_BADARGS};
 fi
 
@@ -32,6 +32,8 @@ This package includes Passenger `passenger-config --version`"
 DEB_URL="http://nginx.net"
 DEB_ARCH=`dpkg-architecture -qDEB_BUILD_ARCH`
 DEB_SECTION="httpd"
+#fetches last line with libssl version
+LIBSSL_VERSION=`/sbin/ldconfig -p | grep libssl | grep -o '[0-9]\.[0-9]\.[0-9]' | tail -n 1`
 
 #TODO find other sudo case 'su'...
 PATERN='rvmsudo is.*'
@@ -57,12 +59,8 @@ if [[ -z ${MAINTAINER+xxx} && "${MAINTAINER+xxx}" = "xxx" ]]; then
 fi
 
 
-if [[ "${CODENAME}" == "squeeze" ]]; then
-  LIBSSL="libssl0.9.8"
-else
-  #should work for wheezy
-  LIBSSL="libssl1.0.0"
-fi
+LIBSSL="libssl${LIBSSL_VERSION}"
+
 LIBCURL="libcurl4-openssl-dev" #whichever libcurl you prefere
 #LIBCURL="libcurl4-gnutls-dev"
 
