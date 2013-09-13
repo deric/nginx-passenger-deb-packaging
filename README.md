@@ -4,6 +4,8 @@ Simple build script for compiling a debian package which can be easily distribut
 
 Script allows modification of included modules etc. if you are familiar with bash syntax you can customize the build according to your needs.
 
+Note: There are official deb packages for Debian and Ubuntu from Phusion company, which are easier to deploy if you don't need special modifications. [official debian packages](http://blog.phusion.nl/2013/09/11/debian-and-ubuntu-packages-for-phusion-passenger/)
+
 ### Requirements
 
   * ruby (recommended >= 1.9.3)
